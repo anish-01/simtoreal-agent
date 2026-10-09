@@ -9,6 +9,11 @@ Built for the AMD Developer Hackathon: ACT III, Track 1 (Intelligent Industry).
 - Anish Jaiswal ([@anish-01](https://github.com/anish-01)): AI, AMD, backend
 - Shailesh ([@shaileshkryadav](https://github.com/shaileshkryadav)): robot sim, UI
 
+## Task board
+
+- [SimToReal Build project board](https://github.com/users/anish-01/projects/3) (all tasks by day and status)
+- [Issues](https://github.com/anish-01/simtoreal-agent/issues) · [Milestones](https://github.com/anish-01/simtoreal-agent/milestones)
+
 ## Setup
 
 Setup coming soon.
