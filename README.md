@@ -16,4 +16,13 @@ Built for the AMD Developer Hackathon: ACT III, Track 1 (Intelligent Industry).
 
 ## Setup
 
-Setup coming soon.
+Day 1 simulation setup (Python 3.12):
+
+```sh
+python3.12 -m venv .venv
+.venv/bin/python -m pip install -r requirements-sim.txt pytest==9.1.1
+.venv/bin/python -m pytest -q
+.venv/bin/python scripts/day1_demo.py --image runs/day1_final.png
+```
+
+Each candidate plan should own a fresh `actions.Robot` and stop on any `ok=False` result. See [Day 1 implementation notes](docs/day1_actions.md) for behavior, rationale, validation and alternatives. The scene and controller run locally without an AMD endpoint.

@@ -25,3 +25,13 @@ The planner returns each plan as JSON in this format:
 - `release`
 - `lift`
 - `home`
+
+## Action behavior
+
+- `move_to` a part hovers 10 cm above its center; a bin target hovers 20 cm above its floor origin.
+- `grasp` requires the preceding move to hover over a part. It descends, closes and lifts back to the hover position, verifying physical grasp and lift.
+- `release` opens the gripper and clears the held-part state.
+- `lift` moves straight up 15 cm by default, or a positive height in meters.
+- `home` returns the arm to its saved starting joint pose, preserving gripper command.
+
+Instantiate one `actions.Robot` per candidate plan. All public actions return `{"ok": true, "reason": ""}` or `{"ok": false, "reason": "..."}`. Stop the candidate on failure. Each action has one four-second simulated-time budget; it may leave a partially moved scene on failure.
