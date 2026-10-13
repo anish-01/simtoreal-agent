@@ -12,9 +12,8 @@ Target: from a fresh VM to both servers answering in under 30 minutes.
 ## 0. Before Day 1 (one time)
 
 1. Create a Hugging Face **Read** token: https://huggingface.co/settings/tokens
-2. Accept the access terms on both model pages, with the same Hugging Face account as the token. Both models are gated; without this the download fails with a "gated repo" error.
-   - https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct (Meta's licence form; approval can take a little while, so do it early)
-   - https://huggingface.co/mistralai/Pixtral-12B-2409
+2. Fill in Meta's licence form on https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct with the same Hugging Face account as the token. Llama is gated; without approval the download fails with a "gated repo" error, and approval can take a little while, so do it early. Check https://huggingface.co/settings/gated-repos for "accepted".
+   - Pixtral (https://huggingface.co/mistralai/Pixtral-12B-2409) is not gated: nothing to accept.
 3. Have an SSH key ready (`ls ~/.ssh/id_ed25519.pub`, or create one with `ssh-keygen -t ed25519`).
 
 ## 1. Start the VM
@@ -137,7 +136,7 @@ Stop the VM itself from the console when you are done for the day.
 
 | Problem | Fix |
 | --- | --- |
-| `gated repo` / 401 when loading a model | Accept the terms on that model page (Llama and Pixtral are both gated) and check `HF_TOKEN` is passed with `-e HF_TOKEN`. |
+| `gated repo` / 401 when loading a model | Accept Meta's terms on the Llama model page and wait for approval (Pixtral is not gated) and check `HF_TOKEN` is passed with `-e HF_TOKEN`. |
 | Second server fails with out-of-memory | Lower `--gpu-memory-utilization` on both, or start them one after the other. |
 | Planner replies with text around the JSON | The request is missing `response_format: {"type": "json_object"}`. `planner.parse` still extracts the JSON. |
 | `curl` from the laptop hangs | The SSH tunnel isn't running, or the server is still loading (check `docker logs`). |
