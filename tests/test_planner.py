@@ -78,3 +78,49 @@ def test_request_plan_uses_json_mode_and_sets_plan_id():
 def test_request_plan_reports_bad_json():
     plan, reason, raw = planner.request_plan('x', llm=FakeLLM('sorry, I cannot'))
     assert plan is None and 'invalid JSON' in reason and raw == 'sorry, I cannot'
+
+
+def test_temperatures_spread_from_low_to_high():
+    assert planner.temperatures(8) == [.2, .314, .429, .543, .657, .771, .886, 1.]
+    assert planner.temperatures(1) == [.2]
+
+
+class ScriptedLLM(FakeLLM):
+    """Candidate 3 always replies with broken JSON; candidate 5 fails once, then succeeds."""
+    def __init__(self):
+        super().__init__(None)
+        self.failed_once = False
+
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+        task = kwargs['messages'][1]['content']
+        if 'plan 3 of' in task:
+            reply = 'not json'
+        elif 'plan 5 of' in task and not self.failed_once:
+            self.failed_once, reply = True, '{"steps": [{"action": "fly"}]}'
+        else:
+            reply = json.dumps(RED_TO_A)
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=reply))])
+
+
+def test_generate_plans_retries_then_drops_bad_candidates():
+    llm = ScriptedLLM()
+    plans = planner.generate_plans('put red part in bin A', n=8, llm=llm)
+    assert [p['plan_id'] for p in plans] == [1, 2, 4, 5, 6, 7, 8]
+    assert len(llm.calls) == 8 + planner.RETRIES + 1
+    assert sorted({c['temperature'] for c in llm.calls}) == planner.temperatures(8)
+
+
+def test_generate_plans_survives_request_errors():
+    class DownLLM(FakeLLM):
+        def create(self, **kwargs):
+            raise ConnectionError('server down')
+    assert planner.generate_plans('x', n=2, llm=DownLLM(None)) == []
+
+
+def test_run_folders_are_unique_and_hold_task_and_plans(tmp_path):
+    import runlog
+    first, second = runlog.new_run('put red part in bin A', tmp_path), runlog.new_run('again', tmp_path)
+    assert first != second and (first / 'task.txt').read_text() == 'put red part in bin A\n'
+    path = runlog.save_json(first, 'plans.json', [RED_TO_A])
+    assert json.loads(path.read_text()) == [RED_TO_A]
