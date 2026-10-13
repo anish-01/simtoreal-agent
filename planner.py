@@ -1,14 +1,18 @@
 """Planner: turns a plain-English task into candidate JSON robot plans via Llama 3.1 on AMD."""
 import json
+import logging
 import math
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 ACTIONS = ('move_to', 'grasp', 'release', 'lift', 'home')
 PARTS = ('red_part', 'blue_part')
 TARGETS = PARTS + ('bin_a', 'bin_b')
 MIN_LIFT, MAX_LIFT = .05, .30
 MAX_STEPS = 16
+RETRIES = 2
+log = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = f"""You plan pick-and-place tasks for a Franka Panda robot arm on a factory table.
 
@@ -105,3 +109,34 @@ def request_plan(task, temperature=.2, plan_id=1, llm=None):
         return None, reason, raw
     plan['plan_id'] = plan_id
     return plan, '', raw
+
+
+def temperatures(n, low=.2, high=1.):
+    """n temperatures spread evenly from low to high."""
+    return [low] if n == 1 else [round(low + (high - low) * i / (n - 1), 3) for i in range(n)]
+
+
+def _one_plan(task, temperature, plan_id, n, llm):
+    """One candidate: first attempt plus up to RETRIES retries. Returns (plan or None, reasons)."""
+    reasons = []
+    for _ in range(1 + RETRIES):
+        try:
+            plan, reason, _ = request_plan(f'{task}\n\n(Candidate plan {plan_id} of {n}.)', temperature, plan_id, llm)
+        except Exception as exc:
+            plan, reason = None, f'request failed: {exc}'
+        if plan:
+            return plan, reasons
+        reasons.append(reason)
+    return None, reasons
+
+
+def generate_plans(task, n=8, llm=None):
+    """Ask for n plans in parallel, temperatures 0.2 to 1.0. Invalid plans are retried, then dropped."""
+    llm = llm or client()
+    with ThreadPoolExecutor(max_workers=n) as pool:
+        results = list(pool.map(lambda i: _one_plan(task, temperatures(n)[i], i + 1, n, llm), range(n)))
+    plans = [plan for plan, _ in results if plan]
+    for i, (plan, reasons) in enumerate(results, 1):
+        if plan is None:
+            log.warning('plan %d dropped after %d attempts: %s', i, len(reasons), '; '.join(reasons))
+    return plans
