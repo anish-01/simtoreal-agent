@@ -2,7 +2,7 @@
 
 **Test before you touch.** SimToReal Agent is a hackathon project for testing AI-generated robot plans in simulation before an operator approves an export.
 
-The planned workflow is: an operator describes a task → Qwen3 on AMD MI300X proposes eight JSON plans → independent MuJoCo simulations test the plans with a Franka Panda arm → a scorer rejects unsafe candidates → Pixtral checks the final camera image → the operator reviews the best plan and approves an export.
+The planned workflow is: an operator describes a task → Llama 3.1 8B on AMD MI300X proposes eight JSON plans → independent MuJoCo simulations test the plans with a Franka Panda arm → a scorer rejects unsafe candidates → Pixtral checks the final camera image → the operator reviews the best plan and approves an export.
 
 Built for the AMD Developer Hackathon: ACT III, Track 1 (Intelligent Industry).
 
