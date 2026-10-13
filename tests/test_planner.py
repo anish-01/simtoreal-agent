@@ -46,8 +46,8 @@ def test_invalid_plans_are_rejected(plan, reason):
     assert not ok and reason in why
 
 
-def test_parse_tolerates_think_block_and_fence():
-    raw = '<think>hmm</think>\n```json\n' + json.dumps(RED_TO_A) + '\n```'
+def test_parse_tolerates_text_and_fence():
+    raw = 'Here is the plan:\n```json\n' + json.dumps(RED_TO_A) + '\n```'
     assert planner.parse(raw) == RED_TO_A
 
 
@@ -67,12 +67,11 @@ class FakeLLM:
         return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=self.reply))])
 
 
-def test_request_plan_turns_thinking_off_and_sets_plan_id():
+def test_request_plan_uses_json_mode_and_sets_plan_id():
     llm = FakeLLM(json.dumps({**RED_TO_A, 'plan_id': 99}))
     plan, reason, _ = planner.request_plan('put red part in bin A', plan_id=3, llm=llm)
     assert reason == '' and plan['plan_id'] == 3
     call = llm.calls[0]
-    assert call['extra_body'] == {'chat_template_kwargs': {'enable_thinking': False}}
     assert call['response_format'] == {'type': 'json_object'}
 
 

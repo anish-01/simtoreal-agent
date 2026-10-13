@@ -31,10 +31,10 @@ def main():
         rows.append(f'| {n} | {task} | {status} | {seconds:.2f} |')
         body = json.dumps(plan, indent=2) if plan else raw
         details.append(f'### {n}. {task}\n\n```json\n{body}\n```\n')
-    model = os.getenv('LLM_MODEL') or 'Qwen/Qwen3-8B'
+    model = os.getenv('LLM_MODEL') or 'meta-llama/Llama-3.1-8B-Instruct'
     OUT.write_text(
         f'# Planner prompt tests\n\n'
-        f'Run {datetime.now():%Y-%m-%d %H:%M} with `{model}`, temperature 0.2, thinking off, JSON mode. '
+        f'Run {datetime.now():%Y-%m-%d %H:%M} with `{model}`, temperature 0.2, JSON mode. '
         f'Prompt: `planner.SYSTEM_PROMPT`. Times include network latency.\n\n'
         f'**Result: {passed}/{len(TASKS)} valid.**\n\n'
         f'| # | Task | Result | Seconds |\n| --- | --- | --- | --- |\n' + '\n'.join(rows) +

@@ -1,4 +1,4 @@
-"""Planner: turns a plain-English task into candidate JSON robot plans via Qwen3 on AMD."""
+"""Planner: turns a plain-English task into candidate JSON robot plans via Llama 3.1 on AMD."""
 import json
 import math
 import os
@@ -71,9 +71,8 @@ def validate(plan):
 
 
 def parse(text):
-    """Parse a model reply into a plan dict, tolerating a stray <think> block or code fence."""
-    text = re.sub(r'<think>.*?</think>', '', text or '', flags=re.S).strip()
-    match = re.search(r'\{.*\}', text, flags=re.S)
+    """Parse a model reply into a plan dict, tolerating text or a code fence around the JSON."""
+    match = re.search(r'\{.*\}', text or '', flags=re.S)
     if not match:
         raise ValueError('no JSON object in reply')
     return json.loads(match.group(0))
@@ -90,12 +89,11 @@ def request_plan(task, temperature=.2, plan_id=1, llm=None):
     """Ask the LLM for one plan. Returns (plan or None, reason, raw reply)."""
     llm = llm or client()
     reply = llm.chat.completions.create(
-        model=os.getenv('LLM_MODEL') or 'Qwen/Qwen3-8B',
+        model=os.getenv('LLM_MODEL') or 'meta-llama/Llama-3.1-8B-Instruct',
         messages=[{'role': 'system', 'content': SYSTEM_PROMPT}, {'role': 'user', 'content': task}],
         temperature=temperature,
         max_tokens=512,
         response_format={'type': 'json_object'},
-        extra_body={'chat_template_kwargs': {'enable_thinking': False}},
     )
     raw = reply.choices[0].message.content or ''
     try:

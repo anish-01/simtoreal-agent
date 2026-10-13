@@ -4,7 +4,7 @@ How to run both models on one AMD Instinct MI300X (AMD Developer Cloud) with vLL
 
 | Role | Model | Port | Env var in `.env` |
 | --- | --- | --- | --- |
-| Planner | `Qwen/Qwen3-8B` | 8000 | `LLM_BASE_URL=http://localhost:8000/v1` |
+| Planner | `meta-llama/Llama-3.1-8B-Instruct` | 8000 | `LLM_BASE_URL=http://localhost:8000/v1` |
 | Vision checker | `mistralai/Pixtral-12B-2409` | 8001 | `VLM_BASE_URL=http://localhost:8001/v1` |
 
 Target: from a fresh VM to both servers answering in under 30 minutes.
@@ -12,7 +12,9 @@ Target: from a fresh VM to both servers answering in under 30 minutes.
 ## 0. Before Day 1 (one time)
 
 1. Create a Hugging Face **Read** token: https://huggingface.co/settings/tokens
-2. Open https://huggingface.co/mistralai/Pixtral-12B-2409 and accept the access terms. The model is gated; without this the download fails with a "gated repo" error.
+2. Accept the access terms on both model pages, with the same Hugging Face account as the token. Both models are gated; without this the download fails with a "gated repo" error.
+   - https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct (Meta's licence form; approval can take a little while, so do it early)
+   - https://huggingface.co/mistralai/Pixtral-12B-2409
 3. Have an SSH key ready (`ls ~/.ssh/id_ed25519.pub`, or create one with `ssh-keygen -t ed25519`).
 
 ## 1. Start the VM
@@ -44,14 +46,14 @@ mkdir -p ~/.cache/huggingface
 Both models share one GPU, so each gets 40% of its memory (`--gpu-memory-utilization 0.40`). Without that, the first server takes almost everything and the second fails with out-of-memory. `--max-model-len` stops each server reserving memory for a huge context we don't need.
 
 ```sh
-# Planner: Qwen3-8B on port 8000
-docker run -d --name qwen \
+# Planner: Llama 3.1 8B on port 8000
+docker run -d --name llama \
   --device=/dev/kfd --device=/dev/dri --group-add video \
   --ipc=host --shm-size 16g --security-opt seccomp=unconfined \
   -p 127.0.0.1:8000:8000 \
   -v ~/.cache/huggingface:/root/.cache/huggingface -e HF_TOKEN \
   $VLLM_IMAGE \
-  vllm serve Qwen/Qwen3-8B --host 0.0.0.0 --port 8000 \
+  vllm serve meta-llama/Llama-3.1-8B-Instruct --host 0.0.0.0 --port 8000 \
   --max-model-len 8192 --gpu-memory-utilization 0.40
 
 # Vision checker: Pixtral-12B on port 8001 (needs the three Mistral-format flags)
@@ -66,35 +68,35 @@ docker run -d --name pixtral \
   --max-model-len 16384 --gpu-memory-utilization 0.40
 ```
 
-Start Qwen first and wait until it is up before starting Pixtral, so the two don't fight over memory during start-up.
+Start Llama first and wait until it is up before starting Pixtral, so the two don't fight over memory during start-up.
 
-The first start downloads the weights (roughly 16 GB for Qwen3-8B and 25 GB for Pixtral). The mounted cache makes the next start much faster, as long as the VM disk is kept.
+The first start downloads the weights (roughly 16 GB for Llama 3.1 8B and 25 GB for Pixtral). The mounted cache makes the next start much faster, as long as the VM disk is kept.
 
 If the container exits straight away because the image has its own entrypoint, add `--entrypoint ""` before `$VLLM_IMAGE`.
 
 ## 4. Check they are running
 
 ```sh
-docker logs -f qwen       # wait for "Application startup complete", then Ctrl+C
+docker logs -f llama      # wait for "Application startup complete", then Ctrl+C
 docker logs -f pixtral
 curl -s localhost:8000/v1/models
 curl -s localhost:8001/v1/models
 ```
 
-Test the planner with thinking turned off. Qwen3 "thinks" by default, which breaks JSON-only output, so the app sends `enable_thinking: false` on every request:
+Test the planner with one JSON request:
 
 ```sh
 curl -s localhost:8000/v1/chat/completions -H 'Content-Type: application/json' -d '{
-  "model": "Qwen/Qwen3-8B",
+  "model": "meta-llama/Llama-3.1-8B-Instruct",
   "messages": [{"role": "user", "content": "Reply with the JSON {\"ok\": true}"}],
-  "chat_template_kwargs": {"enable_thinking": false}
+  "response_format": {"type": "json_object"}
 }'
 ```
 
 Record the versions for `docs/benchmarks.md`:
 
 ```sh
-docker exec qwen vllm --version
+docker exec llama vllm --version
 rocm-smi --showdriverversion
 ```
 
@@ -124,9 +126,9 @@ Never open ports 8000/8001 publicly. If they must be public (for example for a h
 ## 6. Stop and restart
 
 ```sh
-docker stop qwen pixtral       # stop serving (VM still billed)
-docker start qwen pixtral      # start again later
-docker rm -f qwen pixtral      # remove before re-running the docker run commands
+docker stop llama pixtral       # stop serving (VM still billed)
+docker start llama pixtral      # start again later
+docker rm -f llama pixtral      # remove before re-running the docker run commands
 ```
 
 Stop the VM itself from the console when you are done for the day.
@@ -135,9 +137,9 @@ Stop the VM itself from the console when you are done for the day.
 
 | Problem | Fix |
 | --- | --- |
-| `gated repo` / 401 when loading Pixtral | Accept the terms on the model page and check `HF_TOKEN` is passed with `-e HF_TOKEN`. |
+| `gated repo` / 401 when loading a model | Accept the terms on that model page (Llama and Pixtral are both gated) and check `HF_TOKEN` is passed with `-e HF_TOKEN`. |
 | Second server fails with out-of-memory | Lower `--gpu-memory-utilization` on both, or start them one after the other. |
-| Replies start with `<think>` | The request is missing `chat_template_kwargs: {"enable_thinking": false}`. |
+| Planner replies with text around the JSON | The request is missing `response_format: {"type": "json_object"}`. `planner.parse` still extracts the JSON. |
 | `curl` from the laptop hangs | The SSH tunnel isn't running, or the server is still loading (check `docker logs`). |
 | Container can't see the GPU | Check `--device=/dev/kfd --device=/dev/dri --group-add video` and that `rocm-smi` works on the host. |
 
@@ -145,4 +147,4 @@ Stop the VM itself from the console when you are done for the day.
 
 - ROCm vLLM Docker docs: https://rocm.docs.amd.com/how-to/rocm-for-ai/inference/vllm-benchmark.html
 - Pixtral with vLLM: https://docs.mistral.ai/self-deployment/vllm and https://huggingface.co/mistralai/Pixtral-12B-2409
-- Qwen3 with vLLM (thinking switch): https://qwen.readthedocs.io/en/latest/deployment/vllm.html
+- Llama 3.1 8B Instruct model card: https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct
