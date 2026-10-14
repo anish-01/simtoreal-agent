@@ -85,9 +85,34 @@ The Day 1 validation passed all 24 tests on macOS Apple Silicon with Python 3.12
 
 The reference red demo took 6.726 simulated seconds across six actions. This is simulation duration, not a wall-clock or AMD performance benchmark.
 
+## Day 2: simulate a plan and record video
+
+```sh
+.venv/bin/python scripts/simulate_plan.py --plan examples/red_to_bin_a.json \
+  --goals '{"red_part":"bin_a"}'
+```
+
+Each candidate saves a 30 fps MP4, a large final image and result JSON under
+`runs/`. Results include task success, completed steps, simulated time,
+arm-table collision episodes, dropped-part status and failure reason.
+Use `run_plan(plan, goals, run_dir)` in the backend; pass the task's goal
+independently of the candidate plan. See [Day 2 API and handoff](docs/day2_simulator.md).
+
+To connect a typed task to Anish's configured AMD planner:
+
+```sh
+.venv/bin/python scripts/simulate_plan.py --task 'put the red part in bin A' \
+  --goals '{"red_part":"bin_a"}'
+```
+
+Day 2 validation: 63 tests passed, including physical placements, wrong-bin and
+outside-bin rejection, geometry-based bounds, failure stopping and decoded video.
+The saved-plan demo is verified locally; the live AMD milestone needs the team's
+endpoint configuration and joint video review.
+
 ## Limitations
 
-- The controller is tuned to the included scene and Panda model. A successful action does not certify a collision-free path; the later simulator and scorer need collision and dropped-part checks.
+- The controller is tuned to the included scene and Panda model. A successful action does not certify a collision-free path; the simulator measures arm-table collisions and dropped parts; broader collision checks remain future work.
 - The four-second limit bounds simulated physics time. A separate wall-clock worker timeout is needed to interrupt a stalled native solver.
 - The arm can occlude the blue part from the overhead camera when at home.
 - Missing or incompatible scene files raise setup errors when constructing a `Robot`.
@@ -102,7 +127,9 @@ The reference red demo took 6.726 simulated seconds across six actions. This is 
 | `scripts/day1_demo.py` | Local pick-and-place demo with an optional camera snapshot. |
 | `tests/test_actions.py` | Physics and failure-handling tests. |
 | `requirements-sim.txt` | Pinned simulation dependencies. |
-| `app.py`, `planner.py`, `simulator.py`, `scorer.py`, `verifier.py` | Scaffolding for the remaining application components. |
+| `simulator.py`, `scripts/simulate_plan.py` | Goal-based execution, safety measurements, images and video. |
+| `planner.py`, `runlog.py` | AMD planner requests, candidate generation and run logging. |
+| `app.py`, `scorer.py`, `verifier.py` | Scaffolding for remaining application components. |
 
 The Panda model comes from MuJoCo Menagerie and retains its Apache 2.0 license. See [model provenance and modifications](scenes/panda/LOCAL_CHANGES.md).
 

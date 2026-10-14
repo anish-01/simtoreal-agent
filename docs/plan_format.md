@@ -35,3 +35,10 @@ The planner returns each plan as JSON in this format:
 - `home` returns the arm to its saved starting joint pose, preserving gripper command.
 
 Instantiate one `actions.Robot` per candidate plan. All public actions return `{"ok": true, "reason": ""}` or `{"ok": false, "reason": "..."}`. Stop the candidate on failure. Each action has one four-second simulated-time budget; it may leave a partially moved scene on failure.
+
+## Simulator handoff
+
+Call `simulator.run_plan(plan, goals, run_dir)` with a separate task goal mapping,
+e.g. `{"red_part": "bin_a", "blue_part": "bin_b"}`. The simulator must not derive
+the intended goal from a candidate's steps. Results and media are described in
+[the Day 2 API](day2_simulator.md).
