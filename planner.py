@@ -13,10 +13,22 @@ TARGETS = PARTS + BINS
 MIN_LIFT, MAX_LIFT = .05, .30
 MAX_STEPS = 16
 RETRIES = 2
+# One style per candidate, so the 8 plans really differ.
+STYLES = (
+    'use the fewest steps possible',
+    'lift the part 0.25 m right after grasping, before moving it',
+    'lift the part only 0.05 m right after grasping, before moving it',
+    'return the arm home at the end',
+    'start by moving the arm home',
+    'lift the part 0.15 m after grasping and return home at the end',
+    'lift 0.1 m after every release',
+    'lift 0.3 m after grasping, then return home at the end',
+)
+
+
 log = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = f"""You plan pick-and-place tasks for a Franka Panda robot arm on a factory table.
-
 Objects:
 - red_part, blue_part: small cubes on the table
 - bin_a, bin_b: open bins on the table
@@ -122,7 +134,9 @@ def _one_plan(task, temperature, plan_id, n, llm):
     reasons = []
     for _ in range(1 + RETRIES):
         try:
-            plan, reason, _ = request_plan(f'{task}\n\n(Candidate plan {plan_id} of {n}.)', temperature, plan_id, llm)
+            style = STYLES[(plan_id - 1) % len(STYLES)]
+            plan, reason, _ = request_plan(f'{task}\n\n(Candidate plan {plan_id} of {n}. Style: {style}.)', temperature, plan_id, llm)
+
         except Exception as exc:
             plan, reason = None, f'request failed: {exc}'
         if plan:
