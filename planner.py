@@ -8,7 +8,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 ACTIONS = ('move_to', 'grasp', 'release', 'lift', 'home')
 PARTS = ('red_part', 'blue_part')
-TARGETS = PARTS + ('bin_a', 'bin_b')
+BINS = ('bin_a', 'bin_b')
+TARGETS = PARTS + BINS
 MIN_LIFT, MAX_LIFT = .05, .30
 MAX_STEPS = 16
 RETRIES = 2
@@ -140,3 +141,30 @@ def generate_plans(task, n=8, llm=None):
         if plan is None:
             log.warning('plan %d dropped after %d attempts: %s', i, len(reasons), '; '.join(reasons))
     return plans
+
+
+GOALS_PROMPT = """A robot operator gives a task for a robot cell with parts red_part, blue_part and bins bin_a, bin_b.
+Say which part must end up in which bin when the task is done.
+Reply with ONLY one JSON object: {"goals": {"<part>": "<bin>", ...}}
+Include only the parts the task asks to move. If the task asks for nothing possible, reply {"goals": {}}."""
+
+
+def extract_goals(task, llm=None):
+    """Ask the LLM what the finished task looks like, e.g. {'red_part': 'bin_a'}. Returns (goals or None, reason).
+
+    The simulator checks plans against these goals, so they come from the task, never from a candidate plan.
+    """
+    llm = llm or client()
+    try:
+        reply = llm.chat.completions.create(
+            model=os.getenv('LLM_MODEL') or 'meta-llama/Llama-3.1-8B-Instruct',
+            messages=[{'role': 'system', 'content': GOALS_PROMPT}, {'role': 'user', 'content': task}],
+            temperature=0, max_tokens=128, response_format={'type': 'json_object'})
+        goals = parse(reply.choices[0].message.content).get('goals')
+    except Exception as exc:
+        return None, f'could not read the task goals: {exc}'
+    if not isinstance(goals, dict) or not goals:
+        return None, 'the task does not ask to put a part in a bin'
+    if any(part not in PARTS or bin_name not in BINS for part, bin_name in goals.items()):
+        return None, f'unknown part or bin in goals: {goals}'
+    return goals, ''
