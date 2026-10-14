@@ -56,6 +56,7 @@ class Robot:
         self.rotation = mink.SO3.from_matrix(np.diag([1., -1., -1.]))
         self._hover = None
         self.held = None
+        self.step_callback = None
         self._deadline = self.data.time + 1.
         self._wait(.3)
 
@@ -67,6 +68,8 @@ class Robot:
         if self.data.time + self.model.opt.timestep > self._deadline + 1e-9:
             raise ActionFailure('timeout')
         mujoco.mj_step(self.model, self.data)
+        if self.step_callback is not None:
+            self.step_callback(self)
         if not np.isfinite(self.data.qpos).all():
             raise ActionFailure('non-finite simulation state')
 
