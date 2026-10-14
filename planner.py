@@ -8,14 +8,27 @@ from concurrent.futures import ThreadPoolExecutor
 
 ACTIONS = ('move_to', 'grasp', 'release', 'lift', 'home')
 PARTS = ('red_part', 'blue_part')
-TARGETS = PARTS + ('bin_a', 'bin_b')
+BINS = ('bin_a', 'bin_b')
+TARGETS = PARTS + BINS
 MIN_LIFT, MAX_LIFT = .05, .30
 MAX_STEPS = 16
 RETRIES = 2
+# One style per candidate, so the 8 plans really differ.
+STYLES = (
+    'use the fewest steps possible',
+    'lift the part 0.25 m right after grasping, before moving it',
+    'lift the part only 0.05 m right after grasping, before moving it',
+    'return the arm home at the end',
+    'start by moving the arm home',
+    'lift the part 0.15 m after grasping and return home at the end',
+    'lift 0.1 m after every release',
+    'lift 0.3 m after grasping, then return home at the end',
+)
+
+
 log = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = f"""You plan pick-and-place tasks for a Franka Panda robot arm on a factory table.
-
 Objects:
 - red_part, blue_part: small cubes on the table
 - bin_a, bin_b: open bins on the table
@@ -121,7 +134,9 @@ def _one_plan(task, temperature, plan_id, n, llm):
     reasons = []
     for _ in range(1 + RETRIES):
         try:
-            plan, reason, _ = request_plan(f'{task}\n\n(Candidate plan {plan_id} of {n}.)', temperature, plan_id, llm)
+            style = STYLES[(plan_id - 1) % len(STYLES)]
+            plan, reason, _ = request_plan(f'{task}\n\n(Candidate plan {plan_id} of {n}. Style: {style}.)', temperature, plan_id, llm)
+
         except Exception as exc:
             plan, reason = None, f'request failed: {exc}'
         if plan:
@@ -140,3 +155,30 @@ def generate_plans(task, n=8, llm=None):
         if plan is None:
             log.warning('plan %d dropped after %d attempts: %s', i, len(reasons), '; '.join(reasons))
     return plans
+
+
+GOALS_PROMPT = """A robot operator gives a task for a robot cell with parts red_part, blue_part and bins bin_a, bin_b.
+Say which part must end up in which bin when the task is done.
+Reply with ONLY one JSON object: {"goals": {"<part>": "<bin>", ...}}
+Include only the parts the task asks to move. If the task asks for nothing possible, reply {"goals": {}}."""
+
+
+def extract_goals(task, llm=None):
+    """Ask the LLM what the finished task looks like, e.g. {'red_part': 'bin_a'}. Returns (goals or None, reason).
+
+    The simulator checks plans against these goals, so they come from the task, never from a candidate plan.
+    """
+    llm = llm or client()
+    try:
+        reply = llm.chat.completions.create(
+            model=os.getenv('LLM_MODEL') or 'meta-llama/Llama-3.1-8B-Instruct',
+            messages=[{'role': 'system', 'content': GOALS_PROMPT}, {'role': 'user', 'content': task}],
+            temperature=0, max_tokens=128, response_format={'type': 'json_object'})
+        goals = parse(reply.choices[0].message.content).get('goals')
+    except Exception as exc:
+        return None, f'could not read the task goals: {exc}'
+    if not isinstance(goals, dict) or not goals:
+        return None, 'the task does not ask to put a part in a bin'
+    if any(part not in PARTS or bin_name not in BINS for part, bin_name in goals.items()):
+        return None, f'unknown part or bin in goals: {goals}'
+    return goals, ''

@@ -49,6 +49,16 @@ def bench_vlm(image, runs):
     return model, statistics.mean(seconds), first.choices[0].message.content.strip()
 
 
+def write_section(heading, lines, path=ROOT / 'docs' / 'benchmarks.md'):
+    """Replace (or add) one '## heading' section of docs/benchmarks.md, keeping the other sections."""
+    text = path.read_text() if path.exists() else '# Benchmarks\n'
+    parts = text.split('\n## ')
+    section = f'{heading}\n\n' + '\n'.join(lines).strip() + '\n'
+    kept = [part for part in parts[1:] if part.split('\n', 1)[0] != heading]
+    path.write_text('\n## '.join([parts[0].rstrip() + '\n'] + kept + [section]))
+    return path
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--runs', type=int, default=5)
@@ -57,7 +67,7 @@ def main():
     parser.add_argument('--skip-vlm', action='store_true')
     args = parser.parse_args()
 
-    lines = [f'# Benchmarks\n\nMeasured {datetime.now():%Y-%m-%d %H:%M} from `scripts/bench_models.py`. '
+    lines = [f'Measured {datetime.now():%Y-%m-%d %H:%M} with `scripts/bench_models.py`. '
              f'Averages of {args.runs} requests after one warm-up request. Times include the SSH tunnel.\n',
              '| Measurement | Value |', '| --- | --- |']
     if not args.skip_llm:
@@ -69,8 +79,7 @@ def main():
         lines += [f'| Vision model | `{model}` |', f'| One image check | {check:.2f} s |']
         print('Vision answer:', answer)
     lines += ['', 'Fill in from the VM: GPU (`rocm-smi`), ROCm version, vLLM version (`docker exec llama vllm --version`).', '']
-    out = ROOT / 'docs' / 'benchmarks.md'
-    out.write_text('\n'.join(lines))
+    out = write_section('Model serving (AMD)', lines)
     print('\n'.join(lines))
     print('Written to', out)
 

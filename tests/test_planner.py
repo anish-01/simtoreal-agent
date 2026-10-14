@@ -124,3 +124,10 @@ def test_run_folders_are_unique_and_hold_task_and_plans(tmp_path):
     assert first != second and (first / 'task.txt').read_text() == 'put red part in bin A\n'
     path = runlog.save_json(first, 'plans.json', [RED_TO_A])
     assert json.loads(path.read_text()) == [RED_TO_A]
+
+def test_each_candidate_gets_a_different_style():
+    llm = FakeLLM(json.dumps(RED_TO_A))
+    planner.generate_plans('put red part in bin A', n=8, llm=llm)
+    messages = {c['messages'][1]['content'] for c in llm.calls}
+    assert len(messages) == 8
+    assert all('Style:' in m for m in messages)
