@@ -1,0 +1,42 @@
+{
+  "plan_id": 1,
+  "steps": [
+    {
+      "action": "move_to",
+      "target": "red_part"
+    },
+    {
+      "action": "grasp"
+    },
+    {
+      "action": "lift"
+    },
+    {
+      "action": "move_to",
+      "target": "bin_a"
+    },
+    {
+      "action": "release"
+    },
+    {
+      "action": "move_to",
+      "target": "blue_part"
+    },
+    {
+      "action": "grasp"
+    },
+    {
+      "action": "lift"
+    },
+    {
+      "action": "move_to",
+      "target": "bin_b"
+    },
+    {
+      "action": "release"
+    },
+    {
+      "action": "home"
+    }
+  ]
+}

@@ -16,7 +16,7 @@ The Day 1 simulation action layer is implemented for [issue #16](https://github.
 - Structured success and failure results, target validation, physical grasp checks, and a four-second simulated-time limit per action.
 - A deterministic pick-and-place demo and 24 passing tests, including both colors placed in their corresponding bins.
 
-The planner, AMD model services, parallel simulation runner, scorer, vision verifier, approval UI, video recording, and robot program export remain to be implemented. The local demo runs without an AMD endpoint and does not connect to a real robot.
+The planner client, process-based simulation runner, scorer, and video recording are implemented. Live AMD model services need endpoint configuration and validation; the vision verifier, approval UI, and robot program export remain to be implemented. The saved-plan demo runs without an AMD endpoint and does not connect to a real robot.
 
 ## Quick start
 
@@ -110,6 +110,22 @@ outside-bin rejection, geometry-based bounds, failure stopping and decoded video
 The saved-plan demo is verified locally; the live AMD milestone needs the team's
 endpoint configuration and joint video review.
 
+## Day 3: rank plans and verify three demos
+
+The backend now rejects unsafe results first, then ranks safe plans out of 100:
+60 for success, up to 20 for speed, and up to 20 for fewer steps. Every row has
+a plain reason, and rejected plans can never be selected as the best.
+
+```sh
+SIM_WORKERS=4 .venv/bin/python scripts/demo_tasks.py
+```
+
+This checks eight saved candidates each for red-to-A, sorting both parts, and
+an out-of-reach blue part. It runs real physics and records videos without model
+inference. Add `--live` to validate the same tasks against the configured AMD
+planner. See [Day 3 scorer, demo definitions and validation](docs/day3_scorer_demos.md)
+for the API, expected results, and UI handoff.
+
 ## Limitations
 
 - The controller is tuned to the included scene and Panda model. A successful action does not certify a collision-free path; the simulator measures arm-table collisions and dropped parts; broader collision checks remain future work.
@@ -129,7 +145,9 @@ endpoint configuration and joint video review.
 | `requirements-sim.txt` | Pinned simulation dependencies. |
 | `simulator.py`, `scripts/simulate_plan.py` | Goal-based execution, safety measurements, images and video. |
 | `planner.py`, `runlog.py` | AMD planner requests, candidate generation and run logging. |
-| `app.py`, `scorer.py`, `verifier.py` | Scaffolding for remaining application components. |
+| `pipeline.py`, `scorer.py` | Parallel task execution and safety-first weighted ranking. |
+| `demo_tasks.py`, `scripts/demo_tasks.py` | Three shared UI examples and offline/live validation. |
+| `app.py`, `verifier.py` | Scaffolding for remaining application components. |
 
 The Panda model comes from MuJoCo Menagerie and retains its Apache 2.0 license. See [model provenance and modifications](scenes/panda/LOCAL_CHANGES.md).
 

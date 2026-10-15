@@ -48,13 +48,6 @@ def run_all(plans, goals, run_dir, parallel=True, scene=SCENE, timeout=SIM_TIMEO
         pool.join()
 
 
-def _basic_rank(results):
-    """Stand-in until scorer.score (D3.3) exists: successful plans first, fastest first."""
-    rows = [dict(plan_id=r['plan_id'], score=100. if r['success'] else 0., status='OK' if r['success'] else 'Rejected',
-                 reason=r['reason'] or ('OK' if r['success'] else 'failed'), result=r) for r in results]
-    return sorted(rows, key=lambda row: (row['status'] != 'OK', row['result']['time']))
-
-
 def run_task(task, n=8, progress=None, llm=None, parallel=True, scene=SCENE, root=None):
     """One call for the UI. progress(fraction, message) is optional. Everything is saved in runs/<run_id>/ (or under root)."""
     report = progress or (lambda fraction, message: None)
@@ -88,8 +81,7 @@ def run_task(task, n=8, progress=None, llm=None, parallel=True, scene=SCENE, roo
     result['timings']['sim_s'] = round(time.perf_counter() - t, 3)
 
     report(.9, 'Scoring…')
-    rank = getattr(scorer, 'score', None) or _basic_rank
-    result['table'] = rank(results)
+    result['table'] = scorer.score(results)
     result['best'] = next((row for row in result['table'] if row['status'] == 'OK'), None)
     if result['best'] is None:
         result['error'] = 'no safe plan found'
