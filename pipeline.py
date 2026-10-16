@@ -5,6 +5,7 @@ import time
 import planner
 import runlog
 import scorer
+import verifier
 from simulator import run_plan, SCENE
 
 SIM_TIMEOUT = 180.
@@ -85,6 +86,11 @@ def run_task(task, n=8, progress=None, llm=None, parallel=True, scene=SCENE, roo
     result['best'] = next((row for row in result['table'] if row['status'] == 'OK'), None)
     if result['best'] is None:
         result['error'] = 'no safe plan found'
+    else:
+        report(.95, 'Checking the final image with Pixtral…')
+        best = result['best']['result']
+        result['best']['vision'] = verifier.verify(best['image_path'], goals, best['success'])
+        result['timings']['vision_s'] = result['best']['vision']['seconds']
     report(1., 'Done')
     return _finish(result, start)
 
