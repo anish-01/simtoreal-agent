@@ -1,0 +1,259 @@
+{
+  "run_id": "20261016-003315",
+  "run_dir": "/Users/anishjaiswal/Downloads/Simtoagent/simtoreal-agent/runs/20261016-003315",
+  "task": "Put the red part in bin A",
+  "goals": {
+    "red_part": "bin_a"
+  },
+  "plans": [
+    {
+      "plan_id": 1,
+      "steps": [
+        {
+          "action": "move_to",
+          "target": "red_part"
+        },
+        {
+          "action": "grasp"
+        },
+        {
+          "action": "move_to",
+          "target": "bin_a"
+        },
+        {
+          "action": "release"
+        }
+      ]
+    },
+    {
+      "plan_id": 2,
+      "steps": [
+        {
+          "action": "move_to",
+          "target": "red_part"
+        },
+        {
+          "action": "grasp"
+        },
+        {
+          "action": "lift",
+          "height": 0.25
+        },
+        {
+          "action": "move_to",
+          "target": "bin_a"
+        },
+        {
+          "action": "release"
+        }
+      ]
+    },
+    {
+      "plan_id": 4,
+      "steps": [
+        {
+          "action": "move_to",
+          "target": "red_part"
+        },
+        {
+          "action": "grasp"
+        },
+        {
+          "action": "move_to",
+          "target": "bin_a"
+        },
+        {
+          "action": "release"
+        },
+        {
+          "action": "home"
+        }
+      ]
+    },
+    {
+      "plan_id": 5,
+      "steps": [
+        {
+          "action": "home"
+        },
+        {
+          "action": "move_to",
+          "target": "red_part"
+        },
+        {
+          "action": "grasp"
+        },
+        {
+          "action": "move_to",
+          "target": "bin_a"
+        },
+        {
+          "action": "release"
+        }
+      ]
+    },
+    {
+      "plan_id": 6,
+      "steps": [
+        {
+          "action": "move_to",
+          "target": "red_part"
+        },
+        {
+          "action": "grasp"
+        },
+        {
+          "action": "lift",
+          "height": 0.15
+        },
+        {
+          "action": "move_to",
+          "target": "bin_a"
+        },
+        {
+          "action": "release"
+        },
+        {
+          "action": "home"
+        }
+      ]
+    }
+  ],
+  "table": [
+    {
+      "plan_id": 1,
+      "score": 100.0,
+      "status": "OK",
+      "reason": "OK: fastest and shortest safe plan",
+      "result": {
+        "plan_id": 1,
+        "success": true,
+        "steps_done": 4,
+        "time": 5.46,
+        "collisions": 0,
+        "dropped": false,
+        "failed_step": null,
+        "reason": "",
+        "image_path": "/Users/anishjaiswal/Downloads/Simtoagent/simtoreal-agent/runs/20261016-003315/candidate-e14025f007d941ae9ad20a0853e01706/final.png",
+        "video_path": "/Users/anishjaiswal/Downloads/Simtoagent/simtoreal-agent/runs/20261016-003315/candidate-e14025f007d941ae9ad20a0853e01706/video.mp4"
+      },
+      "vision": {
+        "answer": "unknown",
+        "confidence": 0.0,
+        "reason": "vision check failed: Connection error.",
+        "needs_review": true,
+        "seconds": 1.622
+      }
+    },
+    {
+      "plan_id": 5,
+      "score": 91.69,
+      "status": "OK",
+      "reason": "OK: 1.50 s slower than fastest safe plan; 1 more steps than shortest safe plan",
+      "result": {
+        "plan_id": 5,
+        "success": true,
+        "steps_done": 5,
+        "time": 6.962,
+        "collisions": 0,
+        "dropped": false,
+        "failed_step": null,
+        "reason": "",
+        "image_path": "/Users/anishjaiswal/Downloads/Simtoagent/simtoreal-agent/runs/20261016-003315/candidate-86b90f58230a470dba359afc755910f9/final.png",
+        "video_path": "/Users/anishjaiswal/Downloads/Simtoagent/simtoreal-agent/runs/20261016-003315/candidate-86b90f58230a470dba359afc755910f9/video.mp4"
+      }
+    },
+    {
+      "plan_id": 4,
+      "score": 91.39,
+      "status": "OK",
+      "reason": "OK: 1.64 s slower than fastest safe plan; 1 more steps than shortest safe plan",
+      "result": {
+        "plan_id": 4,
+        "success": true,
+        "steps_done": 5,
+        "time": 7.096,
+        "collisions": 0,
+        "dropped": false,
+        "failed_step": null,
+        "reason": "",
+        "image_path": "/Users/anishjaiswal/Downloads/Simtoagent/simtoreal-agent/runs/20261016-003315/candidate-a034734d00ca4c6fb1fc197e6ad4f3b3/final.png",
+        "video_path": "/Users/anishjaiswal/Downloads/Simtoagent/simtoreal-agent/runs/20261016-003315/candidate-a034734d00ca4c6fb1fc197e6ad4f3b3/video.mp4"
+      }
+    },
+    {
+      "plan_id": 6,
+      "score": 87.47,
+      "status": "OK",
+      "reason": "OK: 2.27 s slower than fastest safe plan; 2 more steps than shortest safe plan",
+      "result": {
+        "plan_id": 6,
+        "success": true,
+        "steps_done": 6,
+        "time": 7.726,
+        "collisions": 0,
+        "dropped": false,
+        "failed_step": null,
+        "reason": "",
+        "image_path": "/Users/anishjaiswal/Downloads/Simtoagent/simtoreal-agent/runs/20261016-003315/candidate-4801d14bb7be4088b11afff153488773/final.png",
+        "video_path": "/Users/anishjaiswal/Downloads/Simtoagent/simtoreal-agent/runs/20261016-003315/candidate-4801d14bb7be4088b11afff153488773/video.mp4"
+      }
+    },
+    {
+      "plan_id": 2,
+      "score": 0.0,
+      "status": "Rejected",
+      "reason": "Rejected: dropped part",
+      "result": {
+        "plan_id": 2,
+        "success": false,
+        "steps_done": 5,
+        "time": 6.46,
+        "collisions": 0,
+        "dropped": true,
+        "failed_step": null,
+        "reason": "part dropped before release",
+        "image_path": "/Users/anishjaiswal/Downloads/Simtoagent/simtoreal-agent/runs/20261016-003315/candidate-0c8ca00dc2964d599f94a7bafb47c477/final.png",
+        "video_path": "/Users/anishjaiswal/Downloads/Simtoagent/simtoreal-agent/runs/20261016-003315/candidate-0c8ca00dc2964d599f94a7bafb47c477/video.mp4"
+      }
+    }
+  ],
+  "best": {
+    "plan_id": 1,
+    "score": 100.0,
+    "status": "OK",
+    "reason": "OK: fastest and shortest safe plan",
+    "result": {
+      "plan_id": 1,
+      "success": true,
+      "steps_done": 4,
+      "time": 5.46,
+      "collisions": 0,
+      "dropped": false,
+      "failed_step": null,
+      "reason": "",
+      "image_path": "/Users/anishjaiswal/Downloads/Simtoagent/simtoreal-agent/runs/20261016-003315/candidate-e14025f007d941ae9ad20a0853e01706/final.png",
+      "video_path": "/Users/anishjaiswal/Downloads/Simtoagent/simtoreal-agent/runs/20261016-003315/candidate-e14025f007d941ae9ad20a0853e01706/video.mp4"
+    },
+    "vision": {
+      "answer": "unknown",
+      "confidence": 0.0,
+      "reason": "vision check failed: Connection error.",
+      "needs_review": true,
+      "seconds": 1.622
+    }
+  },
+  "error": "",
+  "timings": {
+    "llm_s": 39.008,
+    "sim_s": 22.984,
+    "vision_s": 1.622,
+    "total_s": 64.903
+  },
+  "amd": {
+    "gpu": "Local test (not AMD)",
+    "llm_model": "llama3.2:3b",
+    "vlm_model": "mistralai/Pixtral-12B-2409",
+    "plans_per_s": 0.13
+  }
+}

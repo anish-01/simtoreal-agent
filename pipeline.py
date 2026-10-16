@@ -97,5 +97,22 @@ def run_task(task, n=8, progress=None, llm=None, parallel=True, scene=SCENE, roo
 
 def _finish(result, start):
     result['timings']['total_s'] = round(time.perf_counter() - start, 3)
+    result['amd'] = _amd(result)
     runlog.save_json(result['run_dir'], 'results.json', result)
     return result
+
+def _finish(result, start):
+    result['timings']['total_s'] = round(time.perf_counter() - start, 3)
+    result['amd'] = _amd(result)
+    runlog.save_json(result['run_dir'], 'results.json', result)
+    return result
+
+
+def _amd(result):
+    """AMD proof for the UI: GPU and model names from settings, plus planning speed."""
+    llm_s = result['timings'].get('llm_s')
+    return dict(gpu=os.getenv('GPU_NAME') or 'unknown GPU',
+                llm_model=os.getenv('LLM_MODEL') or 'meta-llama/Llama-3.1-8B-Instruct',
+                vlm_model=os.getenv('VLM_MODEL') or 'mistralai/Pixtral-12B-2409',
+                plans_per_s=round(len(result['plans']) / llm_s, 2) if llm_s else 0.)
+

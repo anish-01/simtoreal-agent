@@ -51,6 +51,7 @@ def test_run_all_reports_timeouts_instead_of_hanging(tmp_path):
 
 def test_run_task_ranks_plans_and_saves_the_run(tmp_path, monkeypatch):
     monkeypatch.setattr(pipeline.verifier, 'verify', lambda image, goals, success: dict(answer='yes', needs_review=False, seconds=.5))
+    monkeypatch.setenv('GPU_NAME', 'Test GPU')
     steps = []
     result = pipeline.run_task('Put the red part in bin A', n=2, llm=TaskLLM({'red_part': 'bin_a'}, [RED_TO_A, WRONG_BIN]),
                                progress=lambda f, m: steps.append(m), root=tmp_path)
@@ -59,6 +60,8 @@ def test_run_task_ranks_plans_and_saves_the_run(tmp_path, monkeypatch):
     assert result['best']['plan_id'] == 1 and steps[-1] == 'Done'
     assert set(result['timings']) == {'llm_s', 'sim_s', 'vision_s', 'total_s'}
     assert result['best']['vision']['needs_review'] is False
+    assert set(result['amd']) == {'gpu', 'llm_model', 'vlm_model', 'plans_per_s'}
+    assert result['amd']['gpu'] == 'Test GPU'
     saved = Path(result['run_dir'])
     assert {'task.txt', 'goals.json', 'plans.json', 'results.json'} <= {p.name for p in saved.iterdir()}
 
