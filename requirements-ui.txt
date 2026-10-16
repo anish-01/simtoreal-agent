@@ -1,0 +1,3 @@
+-r requirements-sim.txt
+-r requirements-ai.txt
+gradio==6.30.0

@@ -16,7 +16,72 @@ The Day 1 simulation action layer is implemented for [issue #16](https://github.
 - Structured success and failure results, target validation, physical grasp checks, and a four-second simulated-time limit per action.
 - A deterministic pick-and-place demo and 24 passing tests, including both colors placed in their corresponding bins.
 
-The planner client, process-based simulation runner, scorer, and video recording are implemented. Live AMD model services need endpoint configuration and validation; the vision verifier, approval UI, and robot program export remain to be implemented. The saved-plan demo runs without an AMD endpoint and does not connect to a real robot.
+The planner client, process-based simulation runner, scorer, video recording,
+vision verifier, operator UI, and approval exports are implemented. Live AMD
+Token Factory planning and image verification have been exercised with the
+shared DeepSeek APIs; vision disagreements require human review. Dedicated
+Llama/Pixtral deployment on MI300X remains unverified. The saved-plan demo runs
+without an AMD endpoint and does not connect to a real robot.
+
+## Operator page (Days 4–5)
+
+Use Python 3.12 and install the UI plus backend dependencies:
+
+```sh
+python3.12 -m venv .venv
+.venv/bin/python -m pip install -r requirements-ui.txt
+cp .env.example .env
+# Set LLM_BASE_URL and VLM_BASE_URL to the team's configured model endpoints.
+.venv/bin/python app.py
+```
+
+Open http://127.0.0.1:7860. Choose one of the three examples or type a task,
+then select **Test 8 plans in simulation**. The out-of-reach example also selects
+the extended scene; the other examples restore the normal factory scene.
+The page shows progress, colored results with the best row highlighted, the
+best-plan video, all available candidate images, and the camera check.
+
+Review the video and image before **Approve and export this plan**. Unknown or
+disagreeing camera checks require an explicit human-review acknowledgement.
+Approval saves JSON and readable steps under `exports/<unique-id>/` and offers
+both as downloads. Each export records the task, plan, goals, score, UTC approval
+time, vision check, and simulation evidence. Rejected plans cannot be exported.
+Editing the task or scene, choosing an example, or starting a run clears the
+previous approval and download links. Results belong to each browser session.
+
+The AMD panel uses the backend's `amd` and `timings` fields from the current run;
+it does not invent performance numbers. GPU identity is supplied by `GPU_NAME`
+in the deployment configuration. Missing values say “Not reported”. This page
+exports files only; it never connects to or commands a real robot.
+
+The default server listens locally. For the team's deployment, set
+`GRADIO_SERVER_NAME` and optionally `GRADIO_SERVER_PORT`. Share only the app
+port; keep model endpoints private. See [UI validation and handoff](docs/day4_day5_ui.md).
+
+### Using the team's AMD Token Factory key
+
+The shared Token Factory API can run the models without launching a GPU instance.
+Copy `.env.tokenfactory.example` to `.env`, then set `LLM_API_KEY` locally to the
+team key. Both model base URLs are `https://developer.amd.com.cn/radeon/api/v1`.
+The supplied configuration uses `DeepSeek-V4-Flash` for planning and
+`DeepSeek-V4.1-Flash` for image verification; Llama and Pixtral are not in the
+catalog checked on October 16, 2026. Model IDs must match the live `/models`
+catalog. These shared services run on AMD GPUs, but the GPU model is not reported;
+do not present the results as measured MI300X performance.
+
+Run `.venv/bin/python app.py` to use these settings. To validate demos from the
+terminal, run `.venv/bin/python scripts/demo_tasks.py --live --demo easy`, then
+`medium` and `unreachable` separately. Wait at least 65 seconds between demos.
+The team shares the key's quota: the account currently allows 20 requests per
+minute and up to eight concurrent requests. Each eight-plan demo also requests
+goals and, if a best plan exists, a vision check; retries use additional requests.
+Keep `.env` private and out of Git. Never paste the real key into example files.
+
+Tests should remain offline even when a local `.env` is configured:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 .venv/bin/python -m pytest -q
+```
 
 ## Quick start
 
@@ -147,7 +212,9 @@ for the API, expected results, and UI handoff.
 | `planner.py`, `runlog.py` | AMD planner requests, candidate generation and run logging. |
 | `pipeline.py`, `scorer.py` | Parallel task execution and safety-first weighted ranking. |
 | `demo_tasks.py`, `scripts/demo_tasks.py` | Three shared UI examples and offline/live validation. |
-| `app.py`, `verifier.py` | Scaffolding for remaining application components. |
+| `app.py` | Gradio operator page, session results, media review and AMD metrics. |
+| `exporter.py` | Explicit approval, safety checks and downloadable JSON/readable steps. |
+| `verifier.py` | Pixtral final-image checks and human-review flags. |
 
 The Panda model comes from MuJoCo Menagerie and retains its Apache 2.0 license. See [model provenance and modifications](scenes/panda/LOCAL_CHANGES.md).
 
