@@ -17,9 +17,11 @@ The Day 1 simulation action layer is implemented for [issue #16](https://github.
 - A deterministic pick-and-place demo and 24 passing tests, including both colors placed in their corresponding bins.
 
 The planner client, process-based simulation runner, scorer, video recording,
-Pixtral verifier, operator UI, and approval exports are implemented. Live AMD
-model services need endpoint configuration and validation. The saved-plan demo
-runs without an AMD endpoint and does not connect to a real robot.
+vision verifier, operator UI, and approval exports are implemented. Live AMD
+Token Factory planning and image verification have been exercised with the
+shared DeepSeek APIs; vision disagreements require human review. Dedicated
+Llama/Pixtral deployment on MI300X remains unverified. The saved-plan demo runs
+without an AMD endpoint and does not connect to a real robot.
 
 ## Operator page (Days 4–5)
 
@@ -55,6 +57,31 @@ exports files only; it never connects to or commands a real robot.
 The default server listens locally. For the team's deployment, set
 `GRADIO_SERVER_NAME` and optionally `GRADIO_SERVER_PORT`. Share only the app
 port; keep model endpoints private. See [UI validation and handoff](docs/day4_day5_ui.md).
+
+### Using the team's AMD Token Factory key
+
+The shared Token Factory API can run the models without launching a GPU instance.
+Copy `.env.tokenfactory.example` to `.env`, then set `LLM_API_KEY` locally to the
+team key. Both model base URLs are `https://developer.amd.com.cn/radeon/api/v1`.
+The supplied configuration uses `DeepSeek-V4-Flash` for planning and
+`DeepSeek-V4.1-Flash` for image verification; Llama and Pixtral are not in the
+catalog checked on October 16, 2026. Model IDs must match the live `/models`
+catalog. These shared services run on AMD GPUs, but the GPU model is not reported;
+do not present the results as measured MI300X performance.
+
+Run `.venv/bin/python app.py` to use these settings. To validate demos from the
+terminal, run `.venv/bin/python scripts/demo_tasks.py --live --demo easy`, then
+`medium` and `unreachable` separately. Wait at least 65 seconds between demos.
+The team shares the key's quota: the account currently allows 20 requests per
+minute and up to eight concurrent requests. Each eight-plan demo also requests
+goals and, if a best plan exists, a vision check; retries use additional requests.
+Keep `.env` private and out of Git. Never paste the real key into example files.
+
+Tests should remain offline even when a local `.env` is configured:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 .venv/bin/python -m pytest -q
+```
 
 ## Quick start
 

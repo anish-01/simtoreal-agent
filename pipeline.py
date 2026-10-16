@@ -87,7 +87,8 @@ def run_task(task, n=8, progress=None, llm=None, parallel=True, scene=SCENE, roo
     if result['best'] is None:
         result['error'] = 'no safe plan found'
     else:
-        report(.95, 'Checking the final image with Pixtral…')
+        vision_model = os.getenv('VLM_MODEL') or 'mistralai/Pixtral-12B-2409'
+        report(.95, f'Checking the final image with {vision_model}…')
         best = result['best']['result']
         result['best']['vision'] = verifier.verify(best['image_path'], goals, best['success'])
         result['timings']['vision_s'] = result['best']['vision']['seconds']

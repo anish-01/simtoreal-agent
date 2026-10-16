@@ -48,11 +48,14 @@ All eight sorting candidates also passed through the page with a 13-second
 best-plan video and all eight final images. The narrow-screen gallery uses two
 columns to keep every thumbnail accessible.
 
-Live AMD endpoints are not configured locally. Saved-plan browser validation
-exercises actual physics and media; it does not measure model inference or AMD
-performance. GPU/model labels in production are backend settings, not GPU
-attestation. The optional obstacle demo, friend usability review and team-wide
-freeze remain separate; no claims of those checks are made here.
+Live AMD Token Factory endpoints are now configured in a private, Git-ignored
+`.env`. The public `.env.tokenfactory.example` contains the shared URL and tested
+model IDs with an empty key. Planning uses `DeepSeek-V4-Flash`; image verification
+uses `DeepSeek-V4.1-Flash`. These are shared hosted services: the GPU SKU and
+server software versions are not exposed. See `docs/benchmarks.md` for the live
+run measurements and vision-review limitations. Saved-plan browser checks
+exercise physics and media without measuring model inference. The optional
+obstacle demo, friend usability review and team-wide freeze remain separate.
 
 ## Team handoff
 
