@@ -1,4 +1,4 @@
-"""Verifier: checks the final camera image with Pixtral on AMD."""
+"""Verifier: checks the final camera image with a vision model on AMD (Pixtral by default, set by VLM_MODEL)."""
 import base64
 import json
 import os

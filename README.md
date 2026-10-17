@@ -1,234 +1,150 @@
 # SimToReal Agent
 
-**Test before you touch.** SimToReal Agent is a hackathon project for testing AI-generated robot plans in simulation before an operator approves an export.
+**Test before you touch.** An operator types a task in plain English. AI on AMD writes eight robot programs, each one is tested in a physics simulation, unsafe ones are rejected with a reason, and a person approves the best one before anything is exported for the real robot.
 
-The planned workflow is: an operator describes a task → Llama 3.1 8B on AMD MI300X proposes eight JSON plans → independent MuJoCo simulations test the plans with a Franka Panda arm → a scorer rejects unsafe candidates → Pixtral checks the final camera image → the operator reviews the best plan and approves an export.
+Built for the **AMD Developer Hackathon: ACT III**, Track 1 (Intelligent Industry), by team Visionary Creators.
 
-Built for the AMD Developer Hackathon: ACT III, Track 1 (Intelligent Industry).
+## The problem
 
-## Current status
+Re-programming a robot cell for a new pick-and-place job is slow and risky. A program that works on paper can still drop a part, hit the table or reach for something out of range, and on a real line that means scrapped parts, damaged tooling and downtime. AI can write robot programs in seconds, but nobody should run an untested AI program on a real machine.
 
-The Day 1 simulation action layer is implemented for [issue #16](https://github.com/anish-01/simtoreal-agent/issues/16):
+**Who it is for:** the cell operator or automation engineer who changes what a robot cell does, and who must sign off that a new program is safe.
 
-- A factory scene with a Panda arm, table, red and blue parts, two open bins, and a fixed overhead camera named `top_cam`.
-- Five actions: `move_to`, `grasp`, `release`, `lift`, and `home`.
-- Independent simulation state for each `Robot` instance, with arm-only mink inverse kinematics.
-- Structured success and failure results, target validation, physical grasp checks, and a four-second simulated-time limit per action.
-- A deterministic pick-and-place demo and 24 passing tests, including both colors placed in their corresponding bins.
+## What it does
 
-The planner client, process-based simulation runner, scorer, video recording,
-vision verifier, operator UI, and approval exports are implemented. Live AMD
-Token Factory planning and image verification have been exercised with the
-shared DeepSeek APIs; vision disagreements require human review. Dedicated
-Llama/Pixtral deployment on MI300X remains unverified. The saved-plan demo runs
-without an AMD endpoint and does not connect to a real robot.
+1. **Understand the task.** "Sort both parts by color" becomes explicit goals such as `{"red_part": "bin_a", "blue_part": "bin_b"}`.
+2. **Write eight candidate programs** with an LLM on **AMD Token Factory**, each with a different style and temperature. Every step is checked against the allowed actions and objects; broken programs are retried, then dropped.
+3. **Test all eight in parallel** in a MuJoCo simulation of a Franka Panda arm. Each run records a video, a final camera image, timings, collisions and dropped parts.
+4. **Score safely.** Programs that collide, drop a part, fail a step or miss the goal are rejected with a plain reason. Safe programs are ranked out of 100 (60 for success, up to 20 for speed, up to 20 for fewer steps).
+5. **Second opinion from vision.** A vision model on AMD looks at the best program's final camera image. If it disagrees with the simulator or cannot tell, the plan is flagged **needs human review**.
+6. **Human approval.** The operator watches the video, acknowledges any review flag and approves. Only then are the program (JSON) and readable steps exported. Nothing ever commands a real robot.
 
-## Operator page (Days 4–5)
+```mermaid
+flowchart LR
+    A[Operator task] --> B[Goals<br/>LLM on AMD]
+    B --> C[8 candidate plans<br/>LLM on AMD]
+    C --> D[8 parallel MuJoCo<br/>simulations]
+    D --> E[Safety-first scorer]
+    E --> F[Vision check of best plan<br/>VLM on AMD]
+    F --> G{Operator review}
+    G -->|approve| H[Export JSON + steps]
+```
 
-Use Python 3.12 and install the UI plus backend dependencies:
+## Where AMD is used
+
+All model inference runs on **AMD Token Factory**, the AMD GPU service provided for ACT III:
+
+| Job | Model | Setting |
+| --- | --- | --- |
+| Read the task and write 8 plans | `DeepSeek-V4-Flash` | `LLM_MODEL` |
+| Check the final camera image | `DeepSeek-V4.1-Flash` | `VLM_MODEL` |
+
+Every run shows an **AMD run metrics** panel with the models, planning time, vision time, simulation time, total time and plans per second, all taken from that run. Token Factory is a shared service and does not report the GPU model, so the panel says so instead of guessing. Physics simulation runs on the CPU of the machine hosting the app.
+
+## Results
+
+Live runs on AMD Token Factory, 16 October 2026 (single runs, client-side wall time including network; details in [docs/benchmarks.md](docs/benchmarks.md)):
+
+| Task | Valid plans | Passed simulation | Rejected before reaching a robot | Planning | Total |
+| --- | --- | --- | --- | --- | --- |
+| Put the red part in bin A | 8 / 8 | 6 | 2 (dropped part) | 5.7 s | 20.6 s |
+| Sort both parts by color | 8 / 8 | 6 | 2 (dropped part) | 8.1 s | 115.5 s |
+| Blue part out of reach | 8 / 8 | 0 | 8 (unreachable), so nothing is approvable | 6.2 s | 9.8 s |
+
+Across 24 AI-written programs, **12 unsafe or impossible ones were caught in simulation**, each with a reason the operator can read. For the impossible task, the system refuses to offer any program instead of guessing. In both successful tasks the vision check disagreed because the arm hides the bin in the overhead image, and the app correctly required a human to look before approving.
+
+## Run it
+
+You need an AMD Token Factory API key: sign in at [notebooks.amd.com/tokenfactory](https://notebooks.amd.com/tokenfactory) and create one under **API Keys**. Without a key, the saved-plan demos and tests still work.
+
+### Option A: Docker (one command)
 
 ```sh
-python3.12 -m venv .venv
+git clone https://github.com/anish-01/simtoreal-agent.git
+cd simtoreal-agent
+cp .env.tokenfactory.example .env      # then paste your key after LLM_API_KEY=
+docker build -t simtoreal-agent .
+docker run --rm -p 7860:7860 --env-file .env simtoreal-agent
+```
+
+Open http://localhost:7860. The key is passed at run time and is never copied into the image.
+
+### Option B: Python
+
+Python 3.12 or newer, on macOS or Linux:
+
+```sh
+git clone https://github.com/anish-01/simtoreal-agent.git
+cd simtoreal-agent
+python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-ui.txt
-cp .env.example .env
-# Set LLM_BASE_URL and VLM_BASE_URL to the team's configured model endpoints.
+cp .env.tokenfactory.example .env      # then paste your key after LLM_API_KEY=
 .venv/bin/python app.py
 ```
 
-Open http://127.0.0.1:7860. Choose one of the three examples or type a task,
-then select **Test 8 plans in simulation**. The out-of-reach example also selects
-the extended scene; the other examples restore the normal factory scene.
-The page shows progress, colored results with the best row highlighted, the
-best-plan video, all available candidate images, and the camera check.
+Open http://127.0.0.1:7860, pick **Red to bin A**, **Sort both parts** or **Try an out-of-reach part**, and press **Test 8 plans in simulation**. On macOS, allow graphics access if asked.
 
-Review the video and image before **Approve and export this plan**. Unknown or
-disagreeing camera checks require an explicit human-review acknowledgement.
-Approval saves JSON and readable steps under `exports/<unique-id>/` and offers
-both as downloads. Each export records the task, plan, goals, score, UTC approval
-time, vision check, and simulation evidence. Rejected plans cannot be exported.
-Editing the task or scene, choosing an example, or starting a run clears the
-previous approval and download links. Results belong to each browser session.
+### Settings (`.env`)
 
-The AMD panel uses the backend's `amd` and `timings` fields from the current run;
-it does not invent performance numbers. GPU identity is supplied by `GPU_NAME`
-in the deployment configuration. Missing values say “Not reported”. This page
-exports files only; it never connects to or commands a real robot.
-
-The default server listens locally. For the team's deployment, set
-`GRADIO_SERVER_NAME` and optionally `GRADIO_SERVER_PORT`. Share only the app
-port; keep model endpoints private. See [UI validation and handoff](docs/day4_day5_ui.md).
-
-### Using the team's AMD Token Factory key
-
-The shared Token Factory API can run the models without launching a GPU instance.
-Copy `.env.tokenfactory.example` to `.env`, then set `LLM_API_KEY` locally to the
-team key. Both model base URLs are `https://developer.amd.com.cn/radeon/api/v1`.
-The supplied configuration uses `DeepSeek-V4-Flash` for planning and
-`DeepSeek-V4.1-Flash` for image verification; Llama and Pixtral are not in the
-catalog checked on October 16, 2026. Model IDs must match the live `/models`
-catalog. These shared services run on AMD GPUs, but the GPU model is not reported;
-do not present the results as measured MI300X performance.
-
-Run `.venv/bin/python app.py` to use these settings. To validate demos from the
-terminal, run `.venv/bin/python scripts/demo_tasks.py --live --demo easy`, then
-`medium` and `unreachable` separately. Wait at least 65 seconds between demos.
-The team shares the key's quota: the account currently allows 20 requests per
-minute and up to eight concurrent requests. Each eight-plan demo also requests
-goals and, if a best plan exists, a vision check; retries use additional requests.
-Keep `.env` private and out of Git. Never paste the real key into example files.
-
-Tests should remain offline even when a local `.env` is configured:
-
-```sh
-PYTHON_DOTENV_DISABLED=1 .venv/bin/python -m pytest -q
-```
-
-## Quick start
-
-Use Python 3.12. From the repository root on macOS or Linux:
-
-```sh
-python3.12 -m venv .venv
-.venv/bin/python -m pip install -r requirements-sim.txt
-.venv/bin/python scripts/day1_demo.py
-```
-
-The demo picks up the red part, lifts it, moves it to bin A, releases it, and returns the arm home. It prints an action result and simulated duration for each step, stopping with a nonzero exit code if an action fails.
-
-To save a 1280 × 960 overhead snapshot after the run:
-
-```sh
-.venv/bin/python scripts/day1_demo.py --image runs/day1_final.png
-```
-
-Rendering needs an available graphics context. On macOS, allow graphics access if prompted. Physics tests and the demo without `--image` do not create a renderer. Generated files in `runs/` are ignored by Git.
-
-## Using the robot actions
-
-Create one `Robot` for each candidate plan and execute its actions sequentially:
-
-```python
-from actions import Robot
-
-robot = Robot()
-steps = [
-    ("move_to", ("red_part",)),
-    ("grasp", ()),
-    ("lift", (0.15,)),
-    ("move_to", ("bin_a",)),
-    ("release", ()),
-    ("home", ()),
-]
-
-for name, args in steps:
-    result = getattr(robot, name)(*args)
-    if not result["ok"]:
-        print(f"Plan rejected: {result['reason']}")
-        break
-```
-
-Successful actions return `{"ok": true, "reason": ""}`; failed actions return `{"ok": false, "reason": "..."}`. Stop and discard a failed candidate: failure can leave its scene partially moved. Use a separate instance for every parallel candidate; one instance is not intended for concurrent callers.
-
-| Action | Behavior |
+| Variable | Meaning |
 | --- | --- |
-| `move_to(target)` | Hovers 10 cm above a part or 20 cm above a bin's floor origin. Rejects unknown or unreachable targets. |
-| `grasp()` | Requires hovering over a part. Descends, closes, and lifts; checks both finger contacts and actual part lift. |
-| `release()` | Opens the gripper and clears the held-part state. |
-| `lift(height=0.15)` | Moves vertically upward by a positive height in meters. |
-| `home()` | Returns to the starting arm joint pose while preserving the gripper command. |
+| `LLM_BASE_URL` | OpenAI-compatible endpoint for planning (Token Factory: `https://developer.amd.com.cn/radeon/api/v1`) |
+| `VLM_BASE_URL` | Endpoint for the vision check (same Token Factory URL) |
+| `LLM_API_KEY` | Your Token Factory key, used for both. Keep it only in `.env` |
+| `LLM_MODEL`, `VLM_MODEL` | Model IDs; they must exist in the endpoint's `/models` list |
+| `GPU_NAME` | Text for the AMD panel; describe the real hardware only |
+| `SIM_WORKERS` | Parallel simulations (default: CPU count, at most 8; 4 suits an 8 GB laptop) |
+| `GRADIO_SERVER_NAME`, `GRADIO_SERVER_PORT` | Where the page listens (default `127.0.0.1:7860`; Docker uses `0.0.0.0`) |
 
-Allowed targets are `red_part`, `blue_part`, `bin_a`, and `bin_b`. See the [plan format](docs/plan_format.md) for the planner JSON contract.
+The shared Token Factory account allows about 20 requests per minute; one eight-plan run uses roughly ten. Wait about a minute between runs.
 
-## Validation
+### Without a key
 
 ```sh
 .venv/bin/python -m pip install pytest==9.1.1
-.venv/bin/python -m pytest -q
+PYTHON_DOTENV_DISABLED=1 .venv/bin/python -m pytest -q    # 111 tests, no network
+SIM_WORKERS=4 .venv/bin/python scripts/demo_tasks.py       # the 3 demos with saved plans
 ```
 
-The Day 1 validation passed all 24 tests on macOS Apple Silicon with Python 3.12.13. Tests cover physical red and blue pick-and-place, invalid and unreachable targets, grasp preconditions, invalid lifts, timeout behavior for all five actions, solver exceptions, and isolation between simulation instances.
+`PYTHON_DOTENV_DISABLED=1` keeps tests offline even when `.env` holds a key. Add `--live --demo easy` (or `medium`, `unreachable`) to `scripts/demo_tasks.py` to check one demo against the live models.
 
-The reference red demo took 6.726 simulated seconds across six actions. This is simulation duration, not a wall-clock or AMD performance benchmark.
+## Safety by design
 
-## Day 2: simulate a plan and record video
-
-```sh
-.venv/bin/python scripts/simulate_plan.py --plan examples/red_to_bin_a.json \
-  --goals '{"red_part":"bin_a"}'
-```
-
-Each candidate saves a 30 fps MP4, a large final image and result JSON under
-`runs/`. Results include task success, completed steps, simulated time,
-arm-table collision episodes, dropped-part status and failure reason.
-Use `run_plan(plan, goals, run_dir)` in the backend; pass the task's goal
-independently of the candidate plan. See [Day 2 API and handoff](docs/day2_simulator.md).
-
-To connect a typed task to Anish's configured AMD planner:
-
-```sh
-.venv/bin/python scripts/simulate_plan.py --task 'put the red part in bin A' \
-  --goals '{"red_part":"bin_a"}'
-```
-
-Day 2 validation: 63 tests passed, including physical placements, wrong-bin and
-outside-bin rejection, geometry-based bounds, failure stopping and decoded video.
-The saved-plan demo is verified locally; the live AMD milestone needs the team's
-endpoint configuration and joint video review.
-
-## Day 3: rank plans and verify three demos
-
-The backend now rejects unsafe results first, then ranks safe plans out of 100:
-60 for success, up to 20 for speed, and up to 20 for fewer steps. Every row has
-a plain reason, and rejected plans can never be selected as the best.
-
-```sh
-SIM_WORKERS=4 .venv/bin/python scripts/demo_tasks.py
-```
-
-This checks eight saved candidates each for red-to-A, sorting both parts, and
-an out-of-reach blue part. It runs real physics and records videos without model
-inference. Add `--live` to validate the same tasks against the configured AMD
-planner. See [Day 3 scorer, demo definitions and validation](docs/day3_scorer_demos.md)
-for the API, expected results, and UI handoff.
+- The app only exports files. It never connects to or commands a real robot.
+- Rejected programs can never be selected or exported; approval re-checks the simulation result and the plan format.
+- Unknown or disagreeing vision checks need an explicit human acknowledgement.
+- Each export records the task, goals, plan, score, simulation evidence, vision result and UTC approval time.
+- Keys stay in `.env` (git-ignored and excluded from the Docker image).
 
 ## Limitations
 
-- The controller is tuned to the included scene and Panda model. A successful action does not certify a collision-free path; the simulator measures arm-table collisions and dropped parts; broader collision checks remain future work.
-- The four-second limit bounds simulated physics time. A separate wall-clock worker timeout is needed to interrupt a stalled native solver.
-- The arm can occlude the blue part from the overhead camera when at home.
-- Missing or incompatible scene files raise setup errors when constructing a `Robot`.
+- One scene: a Panda arm, two parts and two bins. The controller is tuned to it.
+- The simulator measures arm-table collisions and dropped parts; full path collision checking is future work.
+- The overhead camera can be blocked by the arm, which is why vision only flags for review and never approves on its own.
+- Token Factory does not expose the GPU model or server-side timing, so the numbers above are end-to-end times, not GPU benchmarks.
 
 ## Project files
 
 | Path | Purpose |
 | --- | --- |
-| `actions.py` | Bounded Panda action controller. |
-| `scenes/factory.xml` | Factory scene used by the controller. |
-| `scenes/panda/` | Vendored official Panda model, assets, license, and local modification notes. |
-| `scripts/day1_demo.py` | Local pick-and-place demo with an optional camera snapshot. |
-| `tests/test_actions.py` | Physics and failure-handling tests. |
-| `requirements-sim.txt` | Pinned simulation dependencies. |
-| `simulator.py`, `scripts/simulate_plan.py` | Goal-based execution, safety measurements, images and video. |
-| `planner.py`, `runlog.py` | AMD planner requests, candidate generation and run logging. |
-| `pipeline.py`, `scorer.py` | Parallel task execution and safety-first weighted ranking. |
-| `demo_tasks.py`, `scripts/demo_tasks.py` | Three shared UI examples and offline/live validation. |
-| `app.py` | Gradio operator page, session results, media review and AMD metrics. |
-| `exporter.py` | Explicit approval, safety checks and downloadable JSON/readable steps. |
-| `verifier.py` | Pixtral final-image checks and human-review flags. |
+| `app.py` | Gradio operator page: run, review, AMD metrics, approval |
+| `pipeline.py` | Task → goals → 8 plans → parallel simulations → scores → vision check |
+| `planner.py` | LLM prompts, plan validation and retries |
+| `simulator.py`, `actions.py` | MuJoCo execution of a plan with a bounded Panda controller, video and safety measurements |
+| `scorer.py` | Safety-first rejection and ranking |
+| `verifier.py` | Vision check of the final image and human-review flag |
+| `exporter.py` | Approval checks and JSON / readable-step exports |
+| `demo_tasks.py`, `scripts/demo_tasks.py` | The three demo tasks, offline and live |
+| `scenes/` | Factory scenes and the Panda model from MuJoCo Menagerie (Apache 2.0, see [changes](scenes/panda/LOCAL_CHANGES.md)) |
+| `Dockerfile` | Container for the operator page |
 
-The Panda model comes from MuJoCo Menagerie and retains its Apache 2.0 license. See [model provenance and modifications](scenes/panda/LOCAL_CHANGES.md).
+More detail: [plan format](docs/plan_format.md), [actions](docs/day1_actions.md), [simulator](docs/day2_simulator.md), [scorer and demos](docs/day3_scorer_demos.md), [operator page](docs/day4_day5_ui.md), [prompt tests](docs/prompt_tests.md), [benchmarks](docs/benchmarks.md), [self-hosting on MI300X with vLLM](docs/amd_setup.md).
 
-## Implementation documentation
-
-- [Day 1 implementation notes](docs/day1_actions.md): changes, necessity, validation, alternatives, and remaining limits.
-- [Explanation document](docs/day1_actions_explanation.docx): the same rationale in a three-page Word document.
-- [Draft PR description](docs/day1_pr_draft.md).
-
-## Team and task board
+## Team
 
 **Visionary Creators**
 
-- Anish Jaiswal ([@anish-01](https://github.com/anish-01)): AI, AMD, backend.
-- Shailesh ([@shaileshkryadav](https://github.com/shaileshkryadav)): robot simulation, UI.
+- Anish Jaiswal ([@anish-01](https://github.com/anish-01)): AI planning, AMD integration, backend.
+- Shailesh ([@shaileshkryadav](https://github.com/shaileshkryadav)): robot simulation, operator UI.
 
-Track daily work on the [SimToReal Build project board](https://github.com/users/anish-01/projects/3), [issues](https://github.com/anish-01/simtoreal-agent/issues), and [milestones](https://github.com/anish-01/simtoreal-agent/milestones).
+Work was tracked on the [project board](https://github.com/users/anish-01/projects/3) and [issues](https://github.com/anish-01/simtoreal-agent/issues).
