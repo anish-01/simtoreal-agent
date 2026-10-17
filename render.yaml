@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: simtoreal-agent
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    autoDeployTrigger: "off"
+    envVars:
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_BASE_URL
+        value: https://developer.amd.com.cn/radeon/api/v1
+      - key: VLM_BASE_URL
+        value: https://developer.amd.com.cn/radeon/api/v1
+      - key: LLM_MODEL
+        value: DeepSeek-V4-Flash
+      - key: VLM_MODEL
+        value: DeepSeek-V4.1-Flash
+      - key: GPU_NAME
+        value: AMD Token Factory (GPU model not reported)
+      - key: SIM_WORKERS
+        value: "1"

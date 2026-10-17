@@ -25,6 +25,10 @@ without an AMD endpoint and does not connect to a real robot.
 
 ## Operator page (Days 4–5)
 
+For public hosting, see [Render Docker deployment](docs/hosting.md). The
+repository includes `Dockerfile`, `render.yaml` and a cloud-port-aware launcher.
+The deployment remains unverified until a full run succeeds on the host.
+
 Use Python 3.12 and install the UI plus backend dependencies:
 
 ```sh
