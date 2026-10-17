@@ -1,15 +1,16 @@
-# Secrets never go into the image: pass them at run time with --env-file or platform secrets.
+.git
+.git/**
+.venv
+.venv/**
+**/__pycache__
+.pytest_cache
 .env
 .env.*
 !.env.example
 !.env.tokenfactory.example
-.envrc
-
-.git
-.venv
-__pycache__
-.pytest_cache
-.DS_Store
 runs
 exports
+*.mp4
+*.zip
+.DS_Store
 *.docx

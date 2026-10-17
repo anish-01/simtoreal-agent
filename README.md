@@ -71,6 +71,8 @@ docker run --rm -p 7860:7860 --env-file .env simtoreal-agent
 
 Open http://localhost:7860. The key is passed at run time and is never copied into the image.
 
+The same image runs on Render's free plan: see [hosting on Render](docs/hosting.md) (`render.yaml`, `serve.py`).
+
 ### Option B: Python
 
 Python 3.12 or newer, on macOS or Linux:
@@ -138,7 +140,7 @@ SIM_WORKERS=4 .venv/bin/python scripts/demo_tasks.py       # the 3 demos with sa
 | `exporter.py` | Approval checks and JSON / readable-step exports |
 | `demo_tasks.py`, `scripts/demo_tasks.py` | The three demo tasks, offline and live |
 | `scenes/` | Factory scenes and the Panda model from MuJoCo Menagerie (Apache 2.0, see [changes](scenes/panda/LOCAL_CHANGES.md)) |
-| `Dockerfile` | Container for the operator page |
+| `Dockerfile`, `render.yaml`, `serve.py` | Container and Render deployment of the operator page |
 
 More detail: [plan format](docs/plan_format.md), [actions](docs/day1_actions.md), [simulator](docs/day2_simulator.md), [scorer and demos](docs/day3_scorer_demos.md), [operator page](docs/day4_day5_ui.md), [prompt tests](docs/prompt_tests.md), [benchmarks](docs/benchmarks.md), [self-hosting on MI300X with vLLM](docs/amd_setup.md).
 
