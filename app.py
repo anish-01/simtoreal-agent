@@ -148,7 +148,7 @@ def build_app():
         with gr.Accordion('AMD run metrics', open=True):
             amd = gr.HTML()
             gr.Markdown('Values above are reported by the backend for this run. GPU identity comes from the server configuration.')
-        gr.Markdown('Models served with vLLM on ROCm, AMD Developer Cloud')
+        gr.Markdown('Models served by AMD Token Factory (shared AMD GPU service; GPU model not reported)')
         outputs = [state, status, table, video, gallery, vision, amd, approval, reviewed, files, export_status]
         controls = [task, scene, run, *buttons]
         run.click(run_task, [task, scene], [*outputs, *controls], concurrency_limit=1,
