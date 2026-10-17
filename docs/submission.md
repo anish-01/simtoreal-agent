@@ -23,17 +23,17 @@ AI on AMD Token Factory writes eight robot programs for a factory task; MuJoCo t
 
 ## Long description
 
-**Problem.** Changing what a robot cell does is slow and risky. An AI can write a robot program in seconds, but a program that looks valid can still drop a part, hit the table or reach for something out of range. On a real line that means scrapped parts, damaged tooling and downtime, so nobody should run an untested AI program on a real machine.
+Fits the form limit (1,662 of 2,000 characters).
 
-**User.** The cell operator or automation engineer who re-tasks a robot and has to sign off that a new program is safe.
+Problem: Re-tasking a factory robot is slow and risky. AI can write a robot program in seconds, but a program that looks valid can still drop a part, hit the table or reach for something out of range. On a real line that means scrap, damaged tooling and downtime, so nobody should run an untested AI program on a real machine.
 
-**How it works.** The operator types a task such as "Sort both parts by color". An LLM on AMD Token Factory turns it into explicit goals and writes eight candidate pick-and-place programs, each checked against the allowed actions and objects. All eight run in parallel in a MuJoCo simulation of a Franka Panda arm, which records a video, a final camera image, collisions and dropped parts. A safety-first scorer rejects every program that collides, drops a part, fails a step or misses the goal, and ranks the rest. A vision model on AMD then checks the best program's final image; if it disagrees with the simulator or cannot tell, the plan is flagged for human review. The operator watches the evidence, acknowledges any flag and approves. Only then are the program and readable steps exported. The app never commands a real robot.
+User: the cell operator or automation engineer who must sign off that a new robot program is safe.
 
-**AMD.** All model inference runs on AMD Token Factory: DeepSeek-V4-Flash reads the task and writes the plans, and DeepSeek-V4.1-Flash reviews the camera image. Each run shows an AMD panel with the models, planning, vision and simulation times, and plans per second, taken from that run.
+How it works: The operator types a task such as "Sort both parts by color". An LLM on AMD Token Factory turns it into explicit goals and writes eight candidate pick-and-place programs, each checked against the allowed actions and objects. All eight run in parallel in a MuJoCo simulation of a Franka Panda arm, which records video, a final camera image, collisions and dropped parts. A safety-first scorer rejects any program that collides, drops a part or misses the goal, and ranks the rest. A vision model on AMD checks the best program's final image; if it disagrees with the simulator or cannot tell, the plan is flagged for human review. The operator reviews the evidence and approves, and only then is the program exported. The app never commands a real robot.
 
-**Results.** In live runs on AMD Token Factory, 24 AI-written programs for three tasks were tested: 12 passed and 12 unsafe or impossible ones were caught in simulation before reaching a robot, each with a readable reason. For a part placed out of reach, all eight programs were rejected and the app refused to offer any. Planning eight programs took 6–8 seconds. In both successful tasks the robot arm hid the bin from the camera, and the app correctly required a person to check before approval.
+AMD: All inference runs on AMD Token Factory: DeepSeek-V4-Flash plans, DeepSeek-V4.1-Flash reviews images. An AMD panel shows the models and measured times for every run.
 
-**Next.** Clearer camera views, full path collision checks and a pilot on a real cell.
+Results: In live runs, 24 AI-written programs for three tasks were tested. 12 passed and 12 unsafe or impossible ones were caught in simulation, each with a readable reason. For an out-of-reach part, all eight were rejected and no plan was offered. Planning eight programs took 6 to 8 seconds.
 
 ## Technology tags
 
