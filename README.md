@@ -2,6 +2,8 @@
 
 **Test before you touch.** An operator types a task in plain English. AI on AMD writes eight robot programs, each one is tested in a physics simulation, unsafe ones are rejected with a reason, and a person approves the best one before anything is exported for the real robot.
 
+**Live demo:** https://simtoreal-agent.onrender.com (free hosting: the first visit after a quiet period can take about a minute to wake up).
+
 Built for the **AMD Developer Hackathon: ACT III**, Track 1 (Intelligent Industry), by team Visionary Creators.
 
 ## The problem
